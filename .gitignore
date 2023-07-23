@@ -1,0 +1,4 @@
+.vscode
+.stack-work
+dist-newstyle
+sgf-parsing.cabal
