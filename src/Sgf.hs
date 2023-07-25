@@ -1,8 +1,16 @@
 module Sgf (parseSgf) where
-
-import Data.Map  (Map)
-import Data.Text (Text)
+import qualified Sgf.Internal (lexer, parseSgf)
 import Data.Tree (Tree)
+import Data.Map (Map)
+import Data.Text (Text)
 
-parseSgf :: Text -> Maybe (Tree (Map Text [Text]))
-parseSgf sgf = error "You need to implement this function."
+-- | A tree of nodes.
+type SgfTree = Tree SgfNode
+
+-- | A node is a property list, each key can only occur once.
+-- Keys may have multiple values associated with them.
+type SgfNode = Map Text [Text]
+
+parseSgf :: String -> Maybe SgfTree
+parseSgf = Sgf.Internal.parseSgf . Sgf.Internal.lexer
+

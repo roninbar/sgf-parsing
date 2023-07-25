@@ -5,6 +5,7 @@ dependencies:
   - base
   - containers
   - text
+  - array
 
 library:
   exposed-modules: Sgf

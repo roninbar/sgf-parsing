@@ -2,3 +2,4 @@
 .stack-work
 dist-newstyle
 sgf-parsing.cabal
+src/Sgf/Internal.hs
