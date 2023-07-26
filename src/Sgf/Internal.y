@@ -1,15 +1,19 @@
 {
-module Sgf.Internal (lexer, parseSgf) where
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+module Sgf.Internal (parseSgf) where
 import Data.Char (isSpace, isAlpha, isAlphaNum, isUpper)
 import Data.Map  (Map, empty, singleton, insert)
 import Data.Text (Text, pack, unpack, strip)
 import Data.Tree (Tree(..))
+import Control.Monad.State ( MonadState(..), StateT(..) )
 }
 
 %name parseSgf
 %tokentype { Token }
 %error { parseError }
-%monad { Maybe }
+%monad { P }
+%lexer { lexer } { EOF }
 
 %token
     ';'                       { Semicolon }
@@ -29,15 +33,14 @@ Forest  : {- empty -}           { [] }
         | Tree Forest           { $1 : $2 }
 Node    : ';' Props             { $> }
 Props   : {- empty -}           { empty :: SgfNode }
-        | Prop                  { singleton (head $1) (tail $1) }
         | Prop Props            { insert (head $1) (tail $1) $2 }
 Prop    : name Values           { pack $1 : $2 }
 Values  : value                 { [pack $1] }
         | value Values          { pack $1 : $2 }
 
 {
-parseError :: [Token] -> Maybe a
-parseError _ = Nothing
+parseError :: [Token] -> P a
+parseError _ = StateT $ const Nothing
 
 -- | A tree of nodes.
 type SgfTree = Tree SgfNode
@@ -52,15 +55,29 @@ data Token
     | ParenClose 
     | PropName String
     | PropValue String
+    | EOF
     deriving (Show, Eq)
 
-lexer :: String -> [Token]
-lexer ""                    = []
-lexer ('(':cs)              = ParenOpen : lexer cs
-lexer (')':cs)              = ParenClose : lexer cs
-lexer (';':cs)              = Semicolon : lexer cs
-lexer ('[':cs)              = let (value, rest) = span (/=']') cs in PropValue (unpack $ strip $ pack value) : lexer (tail rest)
-lexer s@(c:cs)  | isAlpha c = let (name, rest) = span isAlphaNum s in PropName name : lexer rest
-                | isSpace c = lexer cs
-                | otherwise = error $ "Unexpected character: '" ++ [c] ++ "'"
+type P = StateT String Maybe
+
+lexer :: (Token -> P a) -> P a
+lexer = (lexer' >>=)
+
+lexer' :: P Token
+lexer' = get >>= \case
+  ""         -> return EOF
+  ('(' : cs) -> put cs >> return ParenOpen
+  (')' : cs) -> put cs >> return ParenClose
+  (';' : cs) -> put cs >> return Semicolon
+  ('[' : cs) ->
+    let (value, rest) = span (/= ']') cs
+    in  put (tail rest) >> return (PropValue value)
+  s@(c : cs)
+    | isAlpha c
+    -> let (name, rest) = span isAlphaNum s
+       in  put rest >> return (PropName name)
+    | isSpace c
+    -> put cs >> lexer'
+    | otherwise
+    -> parseError [PropName [c]]
 }

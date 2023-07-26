@@ -1,5 +1,5 @@
 module Sgf (parseSgf) where
-import qualified Sgf.Internal (lexer, parseSgf)
+import qualified Sgf.Internal (parseSgf)
 import Data.Tree (Tree)
 import Data.Map (Map)
 import Data.Text (Text)
@@ -12,5 +12,5 @@ type SgfTree = Tree SgfNode
 type SgfNode = Map Text [Text]
 
 parseSgf :: String -> Maybe SgfTree
-parseSgf = Sgf.Internal.parseSgf . Sgf.Internal.lexer
+parseSgf = Sgf.Internal.parseSgf
 

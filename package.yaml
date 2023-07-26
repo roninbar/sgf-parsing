@@ -6,6 +6,7 @@ dependencies:
   - containers
   - text
   - array
+  - mtl
 
 library:
   exposed-modules: Sgf
