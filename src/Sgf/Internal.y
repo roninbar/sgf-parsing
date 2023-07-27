@@ -1,12 +1,17 @@
 {
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
-module Sgf.Internal (parseSgf) where
-import Data.Char (isSpace, isAlpha, isAlphaNum, isUpper)
+module Sgf.Internal (parseSgf, lexer, lexer') where
+import Data.Char (isSpace, isUpper)
 import Data.Map  (Map, empty, singleton, insert)
 import Data.Text (Text, pack, unpack, strip)
 import Data.Tree (Tree(..))
 import Control.Monad.State ( MonadState(..), StateT(..) )
+import Text.Regex.Base  ( AllMatches(getAllMatches)
+                        , MatchLength
+                        , MatchOffset
+                        )
+import Text.Regex.PCRE ( (=~) )
 }
 
 %name parseSgf
@@ -39,7 +44,7 @@ Values  : value                 { [pack $1] }
         | value Values          { pack $1 : $2 }
 
 {
-parseError :: [Token] -> P a
+parseError :: Token -> P a
 parseError _ = StateT $ const Nothing
 
 -- | A tree of nodes.
@@ -69,15 +74,23 @@ lexer' = get >>= \case
   ('(' : cs) -> put cs >> return ParenOpen
   (')' : cs) -> put cs >> return ParenClose
   (';' : cs) -> put cs >> return Semicolon
-  ('[' : cs) ->
-    let (value, rest) = span (/= ']') cs
-    in  put (tail rest) >> return (PropValue value)
+  s@('[' : cs) ->
+    let (_, _, rest, [value]) = s =~ "^\\[((?:[^\\]\\\\]|\\\\.)*)\\]" :: (String, String, String, [String])
+    in  put rest >> return (PropValue $ replace '\t' ' ' $ unescape value)
   s@(c : cs)
-    | isAlpha c
-    -> let (name, rest) = span isAlphaNum s
+    | isUpper c
+    -> let (name, rest) = span isUpper s
        in  put rest >> return (PropName name)
     | isSpace c
     -> put cs >> lexer'
     | otherwise
-    -> parseError [PropName [c]]
+    -> parseError $ PropName [c] 
+  where
+    replace :: Char -> Char -> String -> String
+    replace c' c'' s = map (\c -> if c == c' then c'' else c) s
+    unescape :: String -> String
+    unescape s =
+      let ms =
+            getAllMatches (s =~ "\\\\." :: AllMatches [] (MatchOffset, MatchLength))
+      in  foldr (\(o, _) s' -> take o s' ++ drop (o + 1) s') s ms
 }

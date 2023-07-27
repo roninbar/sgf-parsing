@@ -7,6 +7,9 @@ dependencies:
   - text
   - array
   - mtl
+  - regex-base
+  - regex-pcre-builtin
+  - hspec
 
 library:
   exposed-modules: Sgf

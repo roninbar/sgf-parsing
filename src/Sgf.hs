@@ -1,8 +1,11 @@
-module Sgf (parseSgf) where
-import qualified Sgf.Internal (parseSgf)
-import Data.Tree (Tree)
-import Data.Map (Map)
-import Data.Text (Text)
+module Sgf
+  ( parseSgf
+  ) where
+import           Control.Monad.State            ( evalStateT )
+import           Data.Map                       ( Map )
+import           Data.Text                      ( Text )
+import           Data.Tree                      ( Tree )
+import qualified Sgf.Internal                   ( parseSgf )
 
 -- | A tree of nodes.
 type SgfTree = Tree SgfNode
@@ -12,5 +15,6 @@ type SgfTree = Tree SgfNode
 type SgfNode = Map Text [Text]
 
 parseSgf :: String -> Maybe SgfTree
-parseSgf = Sgf.Internal.parseSgf
+parseSgf = evalStateT Sgf.Internal.parseSgf
+
 
