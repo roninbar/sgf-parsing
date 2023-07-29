@@ -4,7 +4,7 @@ module Sgf
   ( parseSgf
   , lexer'
   ) where
-import           Control.Applicative            ( Alternative( (<|>)) )
+import           Control.Applicative            ( Alternative((<|>)) )
 import           Control.Monad.State            ( MonadState(..)
                                                 , StateT(..)
                                                 , evalStateT
@@ -27,8 +27,7 @@ import           Text.Regex.Base                ( AllMatches(..)
                                                 , RegexMaker(..)
                                                 , RegexOptions(..)
                                                 )
-import           Text.Regex.PCRE                ( (=~)
-                                                , Regex
+import           Text.Regex.PCRE                ( Regex
                                                 , compDotAll
                                                 )
 
@@ -66,7 +65,7 @@ lexer' = get >>= \case
     let regex =
           makeRegexOpts (defaultCompOpt + compDotAll)
                         defaultExecOpt
-                        "^\\[((?:[^\\]\\\\]|\\\\.)*)\\]" :: Regex
+                        [r|^\[((?:[^\]\\]|\\.)*)\|] :: Regex
         (_, _, rest, [value]) =
           match regex s :: (String, String, String, [String])
     in  put rest >> return
@@ -86,7 +85,9 @@ lexer' = get >>= \case
   replace c' c'' = map (\c -> if c == c' then c'' else c)
   replaceEscape :: Map Char String -> String -> String
   replaceEscape t s =
-    let ms = (s =~ [r|\\.|] :: AllMatches [] (MatchOffset, MatchLength))
+    let regex =
+          makeRegexOpts (defaultCompOpt + compDotAll) defaultExecOpt [r|\\.|] :: Regex
+        ms = (match regex s :: AllMatches [] (MatchOffset, MatchLength))
     in  foldr
           (\(o, _) s' ->
             let c       = s' !! (o + 1)

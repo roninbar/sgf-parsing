@@ -102,9 +102,10 @@ lexer' = get >>= \case
     replace c' c'' = map (\c -> if c == c' then c'' else c)
     replaceEscape :: Map Char String -> String -> String
     replaceEscape t s =
-      let
-        ms =
-          (s =~ [r|\\.|] :: AllMatches [] (MatchOffset, MatchLength))
+      let regex = makeRegexOpts (defaultCompOpt + compDotAll)
+                                defaultExecOpt
+                                [r|\\.|] :: Regex
+          ms = (match regex s :: AllMatches [] (MatchOffset, MatchLength))
       in  foldr
             (\(o, _) s' ->
               let c       = s' !! (o + 1)
