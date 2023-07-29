@@ -84,7 +84,7 @@ lexer' = get >>= \case
       regex =
         makeRegexOpts (defaultCompOpt + compDotAll)
                       defaultExecOpt
-                      "^\\[((?:[^\\]\\\\]|\\\\.)*)\\]" :: Regex
+                      [r|^\[((?:[^\]\\]|\\.)*)\]|] :: Regex
       (_, _, rest, [value]) = 
         match regex s :: (String, String, String, [String])
     in
