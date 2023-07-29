@@ -1,4 +1,5 @@
 {
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuasiQuotes #-}
 module Sgf.Internal (parseSgf, lexer, lexer') where
@@ -72,8 +73,8 @@ lexer' = get >>= \case
   ('(' : cs) -> put cs >> return ParenOpen
   (')' : cs) -> put cs >> return ParenClose
   s@('[' : _) -> -- [<value>]
-    let regex = makeRegexDotAll [r|^\[((?:[^]\\]|\\.)*)\]|]
-        (_, _, rest, [value]) = match regex s :: (String, String, String, [String])
+    let (_, _, rest, [value]) =
+          matchRegexDotAll [r|^\[((?:[^]\\]|\\.)*)\]|] s :: (String, String, String, [String])
     in put rest >> return (PropValue  $ replace '\t' ' ' 
                                       $ replaceEscape (fromList [('\t', " "), ('\n', "")]) 
                                       value)
@@ -86,14 +87,13 @@ lexer' = get >>= \case
     | otherwise
     -> parseError EOF 
   where
-    makeRegexDotAll :: String -> Regex
-    makeRegexDotAll = makeRegexOpts (defaultCompOpt + compDotAll) defaultExecOpt
+    matchRegexDotAll :: RegexContext Regex String c => String -> String -> c
+    matchRegexDotAll = match . makeRegexOpts (defaultCompOpt + compDotAll) defaultExecOpt
     replace :: Char -> Char -> String -> String
     replace c' c'' = map (\c -> if c == c' then c'' else c)
     replaceEscape :: Map Char String -> String -> String
     replaceEscape t s =
-      let regex = makeRegexDotAll [r|\\.|]
-          ms = getAllMatches (match regex s) :: [(MatchOffset, MatchLength)]
+      let ms = getAllMatches (matchRegexDotAll [r|\\.|] s) :: [(MatchOffset, MatchLength)]
       in  foldr (\(o, l) s' -> -- replace one escape sequence. l should always be 2.
                   let c  = s' !! (o + 1) -- the character following the \.
                       c' = findWithDefault [c] c t
