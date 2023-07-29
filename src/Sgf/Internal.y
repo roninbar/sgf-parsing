@@ -2,10 +2,9 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuasiQuotes #-}
 module Sgf.Internal (parseSgf, lexer, lexer') where
-import Control.Applicative ( Alternative( (<|>) ) )
 import Control.Monad.State ( MonadState(..), StateT(..) )
 import Data.Char (isSpace, isUpper)
-import Data.Map  ( (!?), Map, fromList, empty, singleton, insert)
+import Data.Map  ( (!?), Map, findWithDefault, fromList, empty, singleton, insert)
 import Data.Text (Text, pack, unpack, strip)
 import Data.Tree (Tree(..))
 import Text.RawString.QQ
@@ -96,8 +95,8 @@ lexer' = get >>= \case
       let regex = makeRegexDotAll [r|\\.|]
           ms = getAllMatches (match regex s) :: [(MatchOffset, MatchLength)]
       in  foldr (\(o, l) s' -> -- replace one escape sequence. l should always be 2.
-                  let c       = s' !! (o + 1) -- the character following the \.
-                      Just c' = (t !? c) <|> Just [c]
+                  let c  = s' !! (o + 1) -- the character following the \.
+                      c' = findWithDefault [c] c t
                   in  take o s' ++ c' ++ drop (o + l) s')
                 s
                 ms
