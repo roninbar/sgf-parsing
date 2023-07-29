@@ -19,22 +19,20 @@ import Text.Regex.Base  ( AllMatches(..)
 import Text.Regex.PCRE ( (=~), Regex, compDotAll )
 }
 
-%name parseSgf
-%tokentype { Token }
-%error { parseError }
-%monad { P }
-%lexer { lexer } { EOF }
+%name                           parseSgf
+%tokentype                      { Token }
+%error                          { parseError }
+%monad                          { M }
+%lexer                          { lexer } { EOF }
 
 %token
-    ';'                       { Semicolon }
-    '('                       { ParenOpen }
-    ')'                       { ParenClose }
-    name                      { PropName $$ }
-    value                     { PropValue $$ }
+    ';'                         { Semicolon }
+    '('                         { ParenOpen }
+    ')'                         { ParenClose }
+    name                        { PropName $$ }
+    value                       { PropValue $$ }
 
 %%
-
--- (;FF[4](;B[aa];W[ab])(;B[dd];W[ee]))
 
 Tree    : '(' Branch ')'        { $2 }
 Branch  : Node Forest           { Node $1 $2 }
@@ -49,46 +47,37 @@ Values  : value                 { [pack $1] }
         | value Values          { pack $1 : $2 }
 
 {
-parseError :: Token -> P a
-parseError _ = StateT $ const Nothing
-
--- | A tree of nodes.
-type SgfTree = Tree SgfNode
+type M = StateT String Maybe
 
 -- | A node is a property list, each key can only occur once.
 -- Keys may have multiple values associated with them.
 type SgfNode = Map Text [Text]
 
 data Token
-    = Semicolon
+    = EOF
+    | Semicolon
     | ParenOpen
     | ParenClose
     | PropName String
     | PropValue String
-    | EOF
     deriving (Show, Eq)
 
-type P = StateT String Maybe
-
-lexer :: (Token -> P a) -> P a
+-- | An adapter that exposes a continuation-passing interface as required by the generated parser.
+lexer :: (Token -> M a) -> M a
 lexer f = lexer' >>= f
 
-lexer' :: P Token
+lexer' :: M Token
 lexer' = get >>= \case
   ""         -> return EOF
+  (';' : cs) -> put cs >> return Semicolon
   ('(' : cs) -> put cs >> return ParenOpen
   (')' : cs) -> put cs >> return ParenClose
-  (';' : cs) -> put cs >> return Semicolon
-  s@('[' : _) ->
-    let
-      regex =
-        makeRegexOpts (defaultCompOpt + compDotAll)
-                      defaultExecOpt
-                      [r|^\[((?:[^\]\\]|\\.)*)\]|] :: Regex
-      (_, _, rest, [value]) = 
-        match regex s :: (String, String, String, [String])
-    in
-      put rest >> return (PropValue $ replace '\t' ' ' $ replaceEscape (fromList [('\t', " "), ('\n', "")]) value)
+  s@('[' : _) -> -- [<value>]
+    let regex = makeRegexDotAll [r|^\[((?:[^]\\]|\\.)*)\]|]
+        (_, _, rest, [value]) = match regex s :: (String, String, String, [String])
+    in put rest >> return (PropValue  $ replace '\t' ' ' 
+                                      $ replaceEscape (fromList [('\t', " "), ('\n', "")]) 
+                                      value)
   s@(c : cs)
     | isUpper c
     -> let (name, rest) = span isUpper s
@@ -96,22 +85,23 @@ lexer' = get >>= \case
     | isSpace c
     -> put cs >> lexer'
     | otherwise
-    -> parseError $ PropName [c] 
+    -> parseError EOF 
   where
+    makeRegexDotAll :: String -> Regex
+    makeRegexDotAll = makeRegexOpts (defaultCompOpt + compDotAll) defaultExecOpt
     replace :: Char -> Char -> String -> String
     replace c' c'' = map (\c -> if c == c' then c'' else c)
     replaceEscape :: Map Char String -> String -> String
     replaceEscape t s =
-      let regex = makeRegexOpts (defaultCompOpt + compDotAll)
-                                defaultExecOpt
-                                [r|\\.|] :: Regex
-          ms = (match regex s :: AllMatches [] (MatchOffset, MatchLength))
-      in  foldr
-            (\(o, _) s' ->
-              let c       = s' !! (o + 1)
-                  Just c' = (t !? c) <|> Just [c]
-              in  take o s' ++ c' ++ drop (o + 2) s'
-            )
-            s
-            (getAllMatches ms)
+      let regex = makeRegexDotAll [r|\\.|]
+          ms = getAllMatches (match regex s) :: [(MatchOffset, MatchLength)]
+      in  foldr (\(o, l) s' -> -- replace one escape sequence. l should always be 2.
+                  let c       = s' !! (o + 1) -- the character following the \.
+                      Just c' = (t !? c) <|> Just [c]
+                  in  take o s' ++ c' ++ drop (o + l) s')
+                s
+                ms
+
+parseError :: Token -> M a
+parseError _ = StateT $ const Nothing
 }

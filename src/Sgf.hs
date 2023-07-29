@@ -1,11 +1,8 @@
 module Sgf
   ( parseSgf
   ) where
-import           Control.Monad.State            ( evalStateT
-                                                )
-import           Data.Map                       ( Map
-
-                                                )
+import           Control.Monad.State            ( evalStateT )
+import           Data.Map                       ( Map )
 import           Data.Text                      ( Text )
 import           Data.Tree                      ( Tree )
 import qualified Sgf.Internal                   ( parseSgf )
