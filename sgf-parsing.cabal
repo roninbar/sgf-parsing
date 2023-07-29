@@ -23,7 +23,6 @@ library
     , containers
     , hspec
     , mtl
-    , raw-strings-qq
     , regex-base
     , regex-pcre-builtin
     , text
@@ -42,7 +41,6 @@ test-suite test
     , containers
     , hspec
     , mtl
-    , raw-strings-qq
     , regex-base
     , regex-pcre-builtin
     , sgf-parsing

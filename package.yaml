@@ -7,7 +7,6 @@ dependencies:
   - text
   - array
   - mtl
-  - raw-strings-qq
   - regex-base
   - regex-pcre-builtin
   - hspec
