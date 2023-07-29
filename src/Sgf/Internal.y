@@ -1,12 +1,14 @@
 {
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE QuasiQuotes #-}
 module Sgf.Internal (parseSgf, lexer, lexer') where
+import Control.Applicative ( Alternative( (<|>) ) )
+import Control.Monad.State ( MonadState(..), StateT(..) )
 import Data.Char (isSpace, isUpper)
-import Data.Map  (Map, empty, singleton, insert)
+import Data.Map  ( (!?), Map, fromList, empty, singleton, insert)
 import Data.Text (Text, pack, unpack, strip)
 import Data.Tree (Tree(..))
-import Control.Monad.State ( MonadState(..), StateT(..) )
+import Text.RawString.QQ
 import Text.Regex.Base  ( AllMatches(..)
                         , MatchLength
                         , MatchOffset
@@ -14,7 +16,7 @@ import Text.Regex.Base  ( AllMatches(..)
                         , RegexMaker(..)
                         , RegexOptions(..)
                         )
-import Text.Regex.PCRE ( Regex, (=~) )
+import Text.Regex.PCRE ( (=~), Regex, compDotAll )
 }
 
 %name parseSgf
@@ -57,10 +59,10 @@ type SgfTree = Tree SgfNode
 -- Keys may have multiple values associated with them.
 type SgfNode = Map Text [Text]
 
-data Token 
-    = Semicolon 
-    | ParenOpen 
-    | ParenClose 
+data Token
+    = Semicolon
+    | ParenOpen
+    | ParenClose
     | PropName String
     | PropValue String
     | EOF
@@ -79,10 +81,14 @@ lexer' = get >>= \case
   (';' : cs) -> put cs >> return Semicolon
   s@('[' : _) ->
     let
-      regex = makeRegex "^\\[((?:[^\\]\\\\]|\\\\.)*)\\]" :: Regex
-      (_, _, rest, [value]) = match regex s :: (String, String, String, [String])
+      regex =
+        makeRegexOpts (defaultCompOpt + compDotAll)
+                      defaultExecOpt
+                      "^\\[((?:[^\\]\\\\]|\\\\.)*)\\]" :: Regex
+      (_, _, rest, [value]) = 
+        match regex s :: (String, String, String, [String])
     in
-      put rest >> return (PropValue $ replace '\t' ' ' $ unescape value)
+      put rest >> return (PropValue $ replace '\t' ' ' $ replaceEscape (fromList [('\t', " "), ('\n', "")]) value)
   s@(c : cs)
     | isUpper c
     -> let (name, rest) = span isUpper s
@@ -94,9 +100,17 @@ lexer' = get >>= \case
   where
     replace :: Char -> Char -> String -> String
     replace c' c'' = map (\c -> if c == c' then c'' else c)
-    unescape :: String -> String
-    unescape s =
-      let ms =
-            getAllMatches (s =~ "\\\\." :: AllMatches [] (MatchOffset, MatchLength))
-      in  foldr (\(o, _) s' -> take o s' ++ drop (o + 1) s') s ms
+    replaceEscape :: Map Char String -> String -> String
+    replaceEscape t s =
+      let
+        ms =
+          (s =~ [r|\\.|] :: AllMatches [] (MatchOffset, MatchLength))
+      in  foldr
+            (\(o, _) s' ->
+              let c       = s' !! (o + 1)
+                  Just c' = (t !? c) <|> Just [c]
+              in  take o s' ++ c' ++ drop (o + 2) s'
+            )
+            s
+            (getAllMatches ms)
 }

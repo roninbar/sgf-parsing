@@ -1,5 +1,5 @@
 .vscode
 .stack-work
 dist-newstyle
-sgf-parsing.cabal
+# sgf-parsing.cabal
 src/Sgf/Internal.hs
