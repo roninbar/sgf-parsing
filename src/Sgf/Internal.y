@@ -7,11 +7,14 @@ import Data.Map  (Map, empty, singleton, insert)
 import Data.Text (Text, pack, unpack, strip)
 import Data.Tree (Tree(..))
 import Control.Monad.State ( MonadState(..), StateT(..) )
-import Text.Regex.Base  ( AllMatches(getAllMatches)
+import Text.Regex.Base  ( AllMatches(..)
                         , MatchLength
                         , MatchOffset
+                        , RegexContext(..)
+                        , RegexMaker(..)
+                        , RegexOptions(..)
                         )
-import Text.Regex.PCRE ( (=~) )
+import Text.Regex.PCRE ( Regex, (=~) )
 }
 
 %name parseSgf
@@ -66,7 +69,7 @@ data Token
 type P = StateT String Maybe
 
 lexer :: (Token -> P a) -> P a
-lexer = (lexer' >>=)
+lexer f = lexer' >>= f
 
 lexer' :: P Token
 lexer' = get >>= \case
@@ -74,9 +77,12 @@ lexer' = get >>= \case
   ('(' : cs) -> put cs >> return ParenOpen
   (')' : cs) -> put cs >> return ParenClose
   (';' : cs) -> put cs >> return Semicolon
-  s@('[' : cs) ->
-    let (_, _, rest, [value]) = s =~ "^\\[((?:[^\\]\\\\]|\\\\.)*)\\]" :: (String, String, String, [String])
-    in  put rest >> return (PropValue $ replace '\t' ' ' $ unescape value)
+  s@('[' : _) ->
+    let
+      regex = makeRegex "^\\[((?:[^\\]\\\\]|\\\\.)*)\\]" :: Regex
+      (_, _, rest, [value]) = match regex s :: (String, String, String, [String])
+    in
+      put rest >> return (PropValue $ replace '\t' ' ' $ unescape value)
   s@(c : cs)
     | isUpper c
     -> let (name, rest) = span isUpper s
@@ -87,7 +93,7 @@ lexer' = get >>= \case
     -> parseError $ PropName [c] 
   where
     replace :: Char -> Char -> String -> String
-    replace c' c'' s = map (\c -> if c == c' then c'' else c) s
+    replace c' c'' = map (\c -> if c == c' then c'' else c)
     unescape :: String -> String
     unescape s =
       let ms =
