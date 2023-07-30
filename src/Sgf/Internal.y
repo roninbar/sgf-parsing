@@ -2,11 +2,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuasiQuotes #-}
-module Sgf.Internal (parseSgf, lexer, lexer') where
-import Control.Monad.State ( MonadState(..), StateT(..) )
+module Sgf.Internal (parseSgf) where
+import Control.Monad.State (MonadState(..), StateT(..))
 import Data.Char (isSpace, isUpper)
-import Data.Map  ( (!?), Map, findWithDefault, fromList, empty, singleton, insert)
-import Data.Text (Text, pack, unpack, strip)
+import Data.Map  (Map, findWithDefault, fromList, empty, insert)
+import Data.Text (Text, pack)
 import Data.Tree (Tree(..))
 import Text.RawString.QQ
 import Text.Regex.Base  ( AllMatches(..)
@@ -16,7 +16,7 @@ import Text.Regex.Base  ( AllMatches(..)
                         , RegexMaker(..)
                         , RegexOptions(..)
                         )
-import Text.Regex.PCRE ( (=~), Regex, compDotAll )
+import Text.Regex.PCRE (Regex, compDotAll)
 }
 
 %name                           parseSgf
