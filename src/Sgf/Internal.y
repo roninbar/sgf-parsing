@@ -87,6 +87,7 @@ lexer' = get >>= \case
     | otherwise
     -> parseError EOF 
   where
+    -- PCRE_DOTALL             . matches anything including NL
     matchRegexDotAll :: RegexContext Regex String c => String -> String -> c
     matchRegexDotAll = match . makeRegexOpts (defaultCompOpt + compDotAll) defaultExecOpt
     replace :: Char -> Char -> String -> String
@@ -97,9 +98,11 @@ lexer' = get >>= \case
       in  foldr (\(o, l) s' -> -- replace one escape sequence. l should always be 2.
                   let c  = s' !! (o + 1) -- the character following the \.
                       c' = findWithDefault [c] c t
-                  in  take o s' ++ c' ++ drop (o + l) s')
+                  in  splice o l c' s')
                 s
                 ms
+    splice :: Int -> Int -> String -> String -> String
+    splice o l replacement s = take o s ++ replacement ++ drop (o + l) s
 
 parseError :: Token -> M a
 parseError _ = StateT $ const Nothing
