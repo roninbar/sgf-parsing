@@ -21,10 +21,9 @@ library
       array
     , base
     , containers
-    , hspec
     , mtl
     , regex-base
-    , regex-pcre-builtin
+    , regex-tdfa
     , text
   default-language: Haskell2010
 
@@ -36,13 +35,8 @@ test-suite test
   hs-source-dirs:
       test
   build-depends:
-      array
-    , base
+      base
     , containers
     , hspec
-    , mtl
-    , regex-base
-    , regex-pcre-builtin
     , sgf-parsing
-    , text
   default-language: Haskell2010

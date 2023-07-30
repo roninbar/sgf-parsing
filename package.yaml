@@ -1,28 +1,25 @@
 name: sgf-parsing
 version: 1.2.0.5
 
-dependencies:
-  - base
-  - containers
-  - text
-  - array
-  - mtl
-  - regex-base
-  - regex-pcre-builtin
-  - hspec
-
 library:
   exposed-modules: Sgf
   source-dirs: src
   ghc-options: -Wall
-  # dependencies:
-  # - foo       # List here the packages you
-  # - bar       # want to use in your solution.
+  dependencies:
+    - base
+    - containers
+    - text
+    - array
+    - mtl
+    - regex-base
+    - regex-tdfa
 
 tests:
   test:
     main: Tests.hs
     source-dirs: test
     dependencies:
+      - base
+      - containers
       - sgf-parsing
       - hspec

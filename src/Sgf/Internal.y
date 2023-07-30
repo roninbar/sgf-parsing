@@ -15,7 +15,7 @@ import Text.Regex.Base  ( AllMatches(..)
                         , RegexMaker(..)
                         , RegexOptions(..)
                         )
-import Text.Regex.PCRE (Regex, compDotAll)
+import Text.Regex.TDFA (Regex, CompOption(..))
 }
 
 %name                           parseSgf
@@ -72,11 +72,11 @@ lexer' = get >>= \case
   ('(' : cs) -> put cs >> return ParenOpen
   (')' : cs) -> put cs >> return ParenClose
   s@('[' : _) -> -- [<value>]
-    let (_, _, rest, [value]) =
-          matchRegexDotAll "^\\[((?:[^\\]\\\\]|\\\\.)*)\\]" s :: (String, String, String, [String])
+    let (_, _, rest, submatches) =
+          matchRegexDotAll "^\\[(([^]\\\\]|\\\\.)*)\\]" s :: (String, String, String, [String])
     in put rest >> return (PropValue  $ replace '\t' ' ' 
                                       $ replaceEscape (fromList [('\t', " "), ('\n', "")]) 
-                                      value)
+                                      $ head submatches)
   s@(c : cs)
     | isUpper c
     -> let (name, rest) = span isUpper s
@@ -85,23 +85,25 @@ lexer' = get >>= \case
     -> put cs >> lexer'
     | otherwise
     -> parseError EOF 
-  where
-    -- PCRE_DOTALL             . matches anything including NL
-    matchRegexDotAll :: RegexContext Regex String c => String -> String -> c
-    matchRegexDotAll = match . makeRegexOpts (defaultCompOpt + compDotAll) defaultExecOpt
-    replace :: Char -> Char -> String -> String
-    replace c' c'' = map (\c -> if c == c' then c'' else c)
-    replaceEscape :: Map Char String -> String -> String
-    replaceEscape t s =
-      let ms = getAllMatches (matchRegexDotAll "\\\\." s) :: [(MatchOffset, MatchLength)]
-      in  foldr (\(o, l) s' -> -- replace one escape sequence. l should always be 2.
-                  let c  = s' !! (o + 1) -- the character following the \.
-                      c' = findWithDefault [c] c t
-                  in  splice o l c' s')
-                s
-                ms
-    splice :: Int -> Int -> String -> String -> String
-    splice o l replacement s = take o s ++ replacement ++ drop (o + l) s
+
+matchRegexDotAll :: RegexContext Regex String c => String -> String -> c
+matchRegexDotAll = match . makeRegexOpts (defaultCompOpt { multiline = False }) defaultExecOpt
+
+replace :: Char -> Char -> String -> String
+replace c' c'' = map (\c -> if c == c' then c'' else c)
+
+replaceEscape :: Map Char String -> String -> String
+replaceEscape t s =
+  let ms = getAllMatches (matchRegexDotAll "\\\\." s) :: [(MatchOffset, MatchLength)]
+  in  foldr (\(o, l) s' -> -- replace one escape sequence. l should always be 2.
+              let c  = s' !! (o + 1) -- the character following the \.
+                  c' = findWithDefault [c] c t
+              in  splice o l c' s')
+            s
+            ms
+
+splice :: Int -> Int -> String -> String -> String
+splice o l replacement s = take o s ++ replacement ++ drop (o + l) s
 
 parseError :: Token -> M a
 parseError _ = StateT $ const Nothing
