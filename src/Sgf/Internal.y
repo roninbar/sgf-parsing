@@ -1,7 +1,6 @@
 {
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE QuasiQuotes #-}
 module Sgf.Internal (parseSgf) where
 import Control.Monad.State (MonadState(..), StateT(..))
 import Data.Char (isSpace, isUpper)
@@ -72,11 +71,11 @@ lexer' = get >>= \case
   ('(' : cs) -> put cs >> return ParenOpen
   (')' : cs) -> put cs >> return ParenClose
   s@('[' : _) -> -- [<value>]
-    let (_, _, rest, submatches) =
+    let (_, _, rest, [value, _]) =
           matchRegexDotAll "^\\[(([^]\\\\]|\\\\.)*)\\]" s :: (String, String, String, [String])
     in put rest >> return (PropValue  $ replace '\t' ' ' 
                                       $ replaceEscape (fromList [('\t', " "), ('\n', "")]) 
-                                      $ head submatches)
+                                      $ value)
   s@(c : cs)
     | isUpper c
     -> let (name, rest) = span isUpper s
