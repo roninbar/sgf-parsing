@@ -1,12 +1,14 @@
 {
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE QuasiQuotes #-}
 module Sgf.Internal (parser) where
 import Control.Monad.State (MonadState(..), StateT(..))
 import Data.Char (isSpace, isUpper)
 import Data.Map  (Map, findWithDefault, fromList, empty, insert)
 import Data.Text (Text, pack)
 import Data.Tree (Tree(..))
+import Text.RawString.QQ
 import Text.Regex.Base  ( AllMatches(..)
                         , MatchLength
                         , MatchOffset
@@ -72,7 +74,7 @@ lexer' = get >>= \case
   (')' : cs) -> put cs >> return ParenClose
   s@('[' : _) -> -- [<value>]
     let (_, _, rest, [value, _]) =
-          matchRegexDotAll "^\\[(([^]\\\\]|\\\\.)*)\\]" s :: (String, String, String, [String])
+          matchRegexDotAll [r|^\[(([^]\\]|\\.)*)\]|] s :: (String, String, String, [String])
     in put rest >> return (PropValue  $ replace '\t' ' ' 
                                       $ replaceEscape (fromList [('\t', " "), ('\n', "")]) 
                                       $ value)
@@ -93,7 +95,7 @@ replace c' c'' = map (\c -> if c == c' then c'' else c)
 
 replaceEscape :: Map Char String -> String -> String
 replaceEscape t s =
-  let ms = getAllMatches (matchRegexDotAll "\\\\." s) :: [(MatchOffset, MatchLength)]
+  let ms = getAllMatches (matchRegexDotAll [r|\\.|] s) :: [(MatchOffset, MatchLength)]
   in  foldr (\(o, l) s' -> -- replace one escape sequence. l should always be 2.
               let c = s' !! (o + 1) -- the character following the \.
                   r = findWithDefault [c] c t

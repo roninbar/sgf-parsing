@@ -11,6 +11,7 @@ library:
     - text
     - array
     - mtl
+    - raw-strings-qq
     - regex-base
     - regex-tdfa
 
