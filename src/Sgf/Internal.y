@@ -1,7 +1,7 @@
 {
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
-module Sgf.Internal (parseSgf) where
+module Sgf.Internal (parser) where
 import Control.Monad.State (MonadState(..), StateT(..))
 import Data.Char (isSpace, isUpper)
 import Data.Map  (Map, findWithDefault, fromList, empty, insert)
@@ -17,7 +17,7 @@ import Text.Regex.Base  ( AllMatches(..)
 import Text.Regex.TDFA (Regex, CompOption(..))
 }
 
-%name                           parseSgf
+%name                           parser
 %tokentype                      { Token }
 %error                          { parseError }
 %monad                          { M }
@@ -95,14 +95,14 @@ replaceEscape :: Map Char String -> String -> String
 replaceEscape t s =
   let ms = getAllMatches (matchRegexDotAll "\\\\." s) :: [(MatchOffset, MatchLength)]
   in  foldr (\(o, l) s' -> -- replace one escape sequence. l should always be 2.
-              let c  = s' !! (o + 1) -- the character following the \.
-                  c' = findWithDefault [c] c t
-              in  splice o l c' s')
+              let c = s' !! (o + 1) -- the character following the \.
+                  r = findWithDefault [c] c t
+              in  splice o l r s')
             s
             ms
 
 splice :: Int -> Int -> String -> String -> String
-splice o l replacement s = take o s ++ replacement ++ drop (o + l) s
+splice o l r s = take o s ++ r ++ drop (o + l) s
 
 parseError :: Token -> M a
 parseError _ = StateT $ const Nothing
