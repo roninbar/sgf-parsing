@@ -3,7 +3,6 @@ module Sgf
   ) where
 
 import           Control.Applicative  (Alternative (..))
-import           Control.Monad        (join)
 import           Data.Char            (isUpper)
 import           Data.Map             (Map, fromList)
 import           Data.Maybe           (fromMaybe)
@@ -29,7 +28,7 @@ propName :: Parser Text
 propName = T.pack <$> some (satisfy isUpper)
 
 propValue :: Parser Text
-propValue = T.pack <$ char '[' <*> fmap join (manyTill charLiteral $ char ']')
+propValue = T.pack <$ char '[' <*> fmap concat (manyTill charLiteral $ char ']')
   where
     charLiteral :: Parser String
     charLiteral =
