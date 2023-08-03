@@ -21,6 +21,8 @@ library
       array
     , base
     , containers
+    , hspec
+    , megaparsec
     , mtl
     , regex-base
     , regex-tdfa

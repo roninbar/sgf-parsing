@@ -10,6 +10,8 @@ library:
     - containers
     - text
     - array
+    - hspec
+    - megaparsec
     - mtl
     - regex-base
     - regex-tdfa
