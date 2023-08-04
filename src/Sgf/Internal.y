@@ -32,16 +32,16 @@ import Text.Regex.TDFA (Regex, CompOption(..))
 
 %%
 
-Tree    : '(' Branch ')'        { $2 }
-Branch  : Node Forest           { Node $1 $2 }
+Tree    : '(' Branch ')'        { $2 }              -- SgfTree
+Branch  : Node Forest           { Node $1 $2 }      -- SgfTree
         | Node Branch           { Node $1 [$2] }
-Forest  : {- empty -}           { [] }
+Forest  : {- empty -}           { [] }              -- [SgfTree]
         | Tree Forest           { $1 : $2 }
-Node    : ';' Props             { $> }
-Props   : {- empty -}           { empty :: SgfNode }
-        | Prop Props            { insert (head $1) (tail $1) $2 }
-Prop    : name Values           { pack $1 : $2 }
-Values  : value                 { [pack $1] }
+Node    : ';' Props             { fromList $2 }     -- SgfNode
+Props   : {- empty -}           { [] }              -- [(Text, [Text])]
+        | Prop Props            { $1 : $2 }
+Prop    : name Values           { (pack $1, $2) }   -- (Text, [Text])
+Values  : value                 { [pack $1] }       -- [Text]
         | value Values          { pack $1 : $2 }
 
 {
