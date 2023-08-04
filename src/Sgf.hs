@@ -10,6 +10,7 @@ import           Data.Text            (Text)
 import qualified Data.Text            as T
 import           Data.Tree            (Tree (..))
 import           Data.Void            (Void)
+import           Maybes               (rightToMaybe)
 import           Text.Megaparsec      (MonadParsec (..), Parsec, anySingle,
                                        anySingleBut, between, manyTill,
                                        runParser, satisfy)
@@ -50,7 +51,4 @@ tree :: Parser SgfTree
 tree = between (char '(') (char ')') branch
 
 parseSgf :: String -> Maybe SgfTree
-parseSgf s =
-  case runParser (tree <* eof) "" (T.pack s) of
-    Left _  -> Nothing
-    Right t -> Just t
+parseSgf = rightToMaybe . runParser (tree <* eof) "" . T.pack

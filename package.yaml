@@ -10,11 +10,12 @@ library:
     - containers
     - text
     - array
-    - hspec
+    - ghc
     - megaparsec
     - mtl
     - regex-base
     - regex-tdfa
+    - hspec
 
 tests:
   test:
