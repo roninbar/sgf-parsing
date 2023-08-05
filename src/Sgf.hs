@@ -4,7 +4,6 @@ module Sgf
 
 import           Control.Applicative  (Alternative (..))
 import           Data.Char            (isUpper)
-import           Data.Function        ((&))
 import           Data.Functor         ((<&>))
 import           Data.Map             (Map, fromList)
 import           Data.Maybe           (fromMaybe)
@@ -13,7 +12,7 @@ import qualified Data.Text            as T
 import           Data.Tree            (Tree (..))
 import           Data.Void            (Void)
 import           Text.Megaparsec      (MonadParsec (..), Parsec, anySingle,
-                                       anySingleBut, between, manyTill,
+                                       anySingleBut, manyTill, 
                                        runParser, satisfy)
 import           Text.Megaparsec.Char (char)
 
@@ -53,7 +52,7 @@ branch =
   Node <$> node <*> many tree
 
 tree :: Parser SgfTree
-tree = branch & between (char '(') (char ')')
+tree = char '(' *> branch <* char ')'
 
 parseSgf :: String -> Maybe SgfTree
 parseSgf = rightToMaybe . runParser (tree <* eof) "" . T.pack
