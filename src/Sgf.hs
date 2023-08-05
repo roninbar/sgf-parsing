@@ -27,10 +27,10 @@ type SgfNode = Map Text [Text]
 type Parser = Parsec Void Text
 
 propName :: Parser Text
-propName = some (satisfy isUpper) <&> T.pack
+propName = T.pack <$> some (satisfy isUpper)
 
 propValue :: Parser Text
-propValue = char '[' *> fmap concat (manyTill charLiteral $ char ']') <&> T.pack
+propValue = T.pack <$ char '[' <*> fmap concat (manyTill charLiteral $ char ']')
   where
     charLiteral :: Parser String
     charLiteral =
