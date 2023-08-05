@@ -17,15 +17,9 @@ library
       src
   ghc-options: -Wall
   build-depends:
-      array
-    , base
+      base
     , containers
-    , ghc
-    , hspec
     , megaparsec
-    , mtl
-    , regex-base
-    , regex-tdfa
     , text
   default-language: Haskell2010
 

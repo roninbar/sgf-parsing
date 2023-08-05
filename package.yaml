@@ -8,14 +8,8 @@ library:
   dependencies:
     - base
     - containers
-    - text
-    - array
-    - ghc
     - megaparsec
-    - mtl
-    - regex-base
-    - regex-tdfa
-    - hspec
+    - text
 
 tests:
   test:
