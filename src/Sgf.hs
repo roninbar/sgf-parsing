@@ -4,13 +4,13 @@ module Sgf
 
 import           Control.Applicative  (Alternative (..))
 import           Data.Char            (isUpper)
+import           Data.Functor         ((<&>))
 import           Data.Map             (Map, fromList)
 import           Data.Maybe           (fromMaybe)
 import           Data.Text            (Text)
 import qualified Data.Text            as T
 import           Data.Tree            (Tree (..))
 import           Data.Void            (Void)
-import           Maybes               (rightToMaybe)
 import           Text.Megaparsec      (MonadParsec (..), Parsec, anySingle,
                                        anySingleBut, between, manyTill,
                                        runParser, satisfy)
@@ -26,15 +26,15 @@ type SgfNode = Map Text [Text]
 type Parser = Parsec Void Text
 
 propName :: Parser Text
-propName = T.pack <$> some (satisfy isUpper)
+propName = some (satisfy isUpper) <&> T.pack
 
 propValue :: Parser Text
-propValue = T.pack <$ char '[' <*> fmap concat (manyTill charLiteral $ char ']')
+propValue = char '[' *> fmap concat (manyTill charLiteral $ char ']') <&> T.pack
   where
     charLiteral :: Parser String
     charLiteral =
-      convert [('\t', " ")] <$> anySingleBut '\\' <|>
-      convert [('\t', " "), ('\n', "")] <$ char '\\' <*> anySingle
+      (anySingleBut '\\' <&> convert [('\t', " ")]) <|>
+      (char '\\' *> anySingle <&> convert [('\t', " "), ('\n', "")])
     convert t c = fromMaybe [c] (lookup c t)
 
 prop :: Parser (Text, [Text])
@@ -52,3 +52,6 @@ tree = between (char '(') (char ')') branch
 
 parseSgf :: String -> Maybe SgfTree
 parseSgf = rightToMaybe . runParser (tree <* eof) "" . T.pack
+  where
+    rightToMaybe (Left _)  = Nothing
+    rightToMaybe (Right t) = Just t
