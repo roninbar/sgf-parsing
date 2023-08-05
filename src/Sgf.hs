@@ -4,6 +4,7 @@ module Sgf
 
 import           Control.Applicative  (Alternative (..))
 import           Data.Char            (isUpper)
+import           Data.Function        ((&))
 import           Data.Functor         ((<&>))
 import           Data.Map             (Map, fromList)
 import           Data.Maybe           (fromMaybe)
@@ -45,10 +46,14 @@ node = fromList <$ char ';' <*> many prop
 
 branch :: Parser SgfTree
 branch =
-  try ((\x y -> Node x [y]) <$> node <*> branch) <|> Node <$> node <*> many tree
+  try
+    (do n <- node
+        b <- branch
+        return $ Node n [b]) <|>
+  Node <$> node <*> many tree
 
 tree :: Parser SgfTree
-tree = between (char '(') (char ')') branch
+tree = branch & between (char '(') (char ')')
 
 parseSgf :: String -> Maybe SgfTree
 parseSgf = rightToMaybe . runParser (tree <* eof) "" . T.pack
