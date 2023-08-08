@@ -12,8 +12,7 @@ import qualified Data.Text            as T
 import           Data.Tree            (Tree (..))
 import           Data.Void            (Void)
 import           Text.Megaparsec      (MonadParsec (..), Parsec, anySingle,
-                                       anySingleBut, manyTill, 
-                                       runParser, satisfy)
+                                       anySingleBut, manyTill, satisfy, parse)
 import           Text.Megaparsec.Char (char)
 
 -- | A tree of nodes.
@@ -29,7 +28,7 @@ propName :: Parser Text
 propName = T.pack <$> some (satisfy isUpper)
 
 propValue :: Parser Text
-propValue = T.pack <$ char '[' <*> fmap concat (manyTill charLiteral $ char ']')
+propValue = T.pack . concat <$ char '[' <*> manyTill charLiteral (char ']')
   where
     charLiteral :: Parser String
     charLiteral =
@@ -55,7 +54,7 @@ tree :: Parser SgfTree
 tree = char '(' *> branch <* char ')'
 
 parseSgf :: String -> Maybe SgfTree
-parseSgf = rightToMaybe . runParser (tree <* eof) "" . T.pack
+parseSgf = rightToMaybe . parse (tree <* eof) "<String>" . T.pack
   where
     rightToMaybe (Left _)  = Nothing
     rightToMaybe (Right t) = Just t
